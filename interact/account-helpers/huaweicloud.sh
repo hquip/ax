@@ -73,7 +73,7 @@ if [[ "$(printf '%s\n' "$installed_version" "$HcloudCliVersion" | sort -V | head
             
             # 如果所有源都失败
             if [ "$install_success" = false ]; then
-                echo -e "${BRed}华为云 CLI 安装失败。请检查网络连接或手动安装。${Color_Off}"
+                echo -e "${BRed}华为云 CLI 安��失败。请检查网络连接或手动安装。${Color_Off}"
                 echo -e "${Yellow}手动安装说明：https://support.huaweicloud.com/intl/zh-cn/cli/index.html${Color_Off}"
                 exit 1
             fi
@@ -126,13 +126,18 @@ function huaweicloudsetup() {
         read ACCESS_KEY
         
         echo -e -n "${Green}请输入访问密钥密码 (SK): \n>> ${Color_Off}"
-        read -s SECRET_KEY
-        echo
+        trap 'stty echo' EXIT  # 确保在脚本退出时恢复输入显示
+        stty -echo  # 关闭输入回显
+        IFS= read -r SECRET_KEY  # 使用 IFS= 来保留前导和尾随空格
+        stty echo   # 恢复输入回显
+        echo        # 打印换行
         
         while [[ "$SECRET_KEY" == "" ]]; do
             echo -e "${BRed}请提供华为云访问密钥密码，您的输入为空。${Color_Off}"
             echo -e -n "${Green}请输入访问密钥密码 (SK): \n>> ${Color_Off}"
-            read -s SECRET_KEY
+            stty -echo
+            IFS= read -r SECRET_KEY
+            stty echo
             echo
         done
         
