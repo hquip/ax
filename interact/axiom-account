@@ -32,7 +32,7 @@ fi
 
 function bootstrap() {
     account_helpers=$(find "$AXIOM_PATH/interact/account-helpers" -name '*.sh' ! -name 'generate*' -execdir basename -s '.sh' {} +)
-    account_str=$(echo "$account_helpers" | sed 's/ /, /g')
+    account_str="aws, azure, do, gcp, hetzner, huaweicloud, ibm, linode, scaleway"
     provider_path="$AXIOM_PATH/interact/account-helpers/$provider.sh"
     bash "$provider_path"
 }
@@ -595,36 +595,70 @@ if [[ "$provider" == "scaleway" ]]; then
 fi # end of scaleway
 
 # 在 provider 判断部分添加华为云的处理逻辑
-elif [[ "$provider" == "huaweicloud" ]]; then
+if [[ "$provider" == "huaweicloud" ]]; then
+   installed_version=$(hcloud --version 2>/dev/null | cut -d ' ' -f 3)
+   if [[ "$(printf '%s\n' "$installed_version" "$HcloudCliVersion" | sort -V | head -n 1)" != "$HcloudCliVersion" ]]; then
+
+        # Handle macOS installation/update
+        if [[ $BASEOS == "Mac" ]]; then
+            whereis brew
+            if [ ! $? -eq 0 ] || [[ ! -z ${AXIOM_FORCEBREW+x} ]]; then
+                echo -e "${BGreen}Installing Homebrew...${Color_Off}"
+                /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+            else
+                echo -e "${BGreen}Checking for Homebrew... already installed.${Color_Off}"
+            fi
+            echo -e "${BGreen}Installing Huawei Cloud CLI (hcloud)...${Color_Off}"
+            brew install huaweicloud-cli
+
+        # Handle Linux installation/update
+        elif [[ $BASEOS == "Linux" ]]; then
+            if uname -a | grep -qi "Microsoft"; then
+                OS="UbuntuWSL"
+            else
+                OS=$(lsb_release -i 2>/dev/null | awk '{ print $3 }')
+                if ! command -v lsb_release &> /dev/null; then
+                    OS="unknown-Linux"
+                    BASEOS="Linux"
+                fi
+            fi
+
+            # Install or update huaweicloud-cli on different Linux distributions
+            if [[ $OS == "Arch" ]] || [[ $OS == "ManjaroLinux" ]]; then
+                sudo pacman -Syu huaweicloud-cli --noconfirm
+            elif [[ $OS == "Ubuntu" ]] || [[ $OS == "Debian" ]] || [[ $OS == "Linuxmint" ]] || [[ $OS == "Parrot" ]] || [[ $OS == "Kali" ]] || [[ $OS == "unknown-Linux" ]] || [[ $OS == "UbuntuWSL" ]]; then
+                echo -e "${BGreen}Installing Huawei Cloud CLI (hcloud)...${Color_Off}"
+                curl -fsSL https://cli-repo.huaweicloud.com/cli/install.sh | bash
+            elif [[ $OS == "Fedora" ]]; then
+                echo "Needs Conversation for Fedora"
+            fi
+        fi
+   fi
+
     echo -e "${BGreen}Installing Huawei Cloud packer plugin...${Color_Off}"
     packer plugins install github.com/huaweicloud/huaweicloud
 
-    # 从配置文件获取认证信息
+    # Setup Huawei Cloud account configuration
     access_key="$(jq -r '.access_key' "$AXIOM_PATH/accounts/$1.json")"
     secret_key="$(jq -r '.secret_key' "$AXIOM_PATH/accounts/$1.json")"
     project_id="$(jq -r '.project_id' "$AXIOM_PATH/accounts/$1.json")"
     region="$(jq -r '.region' "$AXIOM_PATH/accounts/$1.json")"
 
-    # 配置华为云 CLI
-    if ! command -v hcloud &> /dev/null; then
-        echo -e "${Yellow}Huawei Cloud CLI (hcloud) not found. Installing...${Color_Off}"
-        curl -fsSL https://cli-repo.huaweicloud.com/cli/install.sh | bash
-    fi
-
-    # 配置华为云凭证
+    # Configure Huawei Cloud CLI with credentials
+    echo -e "${BGreen}Configuring Huawei Cloud CLI with credentials from $1.json...${Color_Off}"
     hcloud configure set ak "$access_key"
     hcloud configure set sk "$secret_key"
     hcloud configure set project "$project_id"
     hcloud configure set region "$region"
 
-    # 验证凭证
-    if ! hcloud ecs list-flavors &>/dev/null; then
-        echo -e "${BRed}Huawei Cloud authentication failed. Running bootstrap...${Color_Off}"
-        bootstrap
-    else
+    # Check if credentials are valid
+    if hcloud ecs list-flavors &>/dev/null; then
         echo -e "${BGreen}Huawei Cloud credentials authenticated successfully.${Color_Off}"
+    else
+        echo -e "${Red}Huawei Cloud authentication failed. Please check your credentials.${Color_Off}"
+        bootstrap
     fi
-fi
+fi # end of huaweicloud
 
 echo -e "${Green}Selected $1 successfully${Color_Off}"
 else
