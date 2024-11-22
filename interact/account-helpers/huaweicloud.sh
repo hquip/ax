@@ -56,7 +56,27 @@ if [[ "$(printf '%s\n' "$installed_version" "$HcloudCliVersion" | sort -V | head
         # 根据具体的 Linux 发行版安装华为云 CLI
         if [[ $OS == "Ubuntu" ]] || [[ $OS == "Debian" ]] || [[ $OS == "Linuxmint" ]] || [[ $OS == "Parrot" ]] || [[ $OS == "Kali" ]] || [[ $OS == "unknown-Linux" ]] || [[ $OS == "UbuntuWSL" ]]; then
             echo -e "${BGreen}在 $OS 上安装/更新华为云 CLI...${Color_Off}"
-            curl -fsSL https://cli-repo.huaweicloud.com/cli/install.sh | bash
+            # 尝试多个安装源
+            install_success=false
+            
+            # 尝试官方源
+            if curl -fsSL https://obs.cn-north-4.myhuaweicloud.com/hcloud/cli/latest/hcloud.sh | bash; then
+                install_success=true
+            fi
+            
+            # 如果官方源失败，尝试备用源
+            if [ "$install_success" = false ]; then
+                if curl -fsSL https://mirrors.huaweicloud.com/cli/latest/hcloud.sh | bash; then
+                    install_success=true
+                fi
+            fi
+            
+            # 如果所有源都失败
+            if [ "$install_success" = false ]; then
+                echo -e "${BRed}华为云 CLI 安装失败。请检查网络连接或手动安装。${Color_Off}"
+                echo -e "${Yellow}手动安装说明：https://support.huaweicloud.com/intl/zh-cn/cli/index.html${Color_Off}"
+                exit 1
+            fi
         elif [[ $OS == "Fedora" ]]; then
             echo -e "${BGreen}在 Fedora 上安装/更新华为云 CLI...${Color_Off}"
             curl -fsSL https://cli-repo.huaweicloud.com/cli/install.sh | bash
@@ -76,7 +96,7 @@ function huaweicloudsetup() {
         echo -e "${Yellow}注意: 每个IAM用户最多可以创建2个有效的访问密钥(AK/SK)${Color_Off}"
         
         # 列出现有的华为云配置
-        existing_configs=$(ls -1 "$AXIOM_PATH/accounts/" | grep "huaweicloud.*\.json" | sed 's/\.json//')
+        existing_configs=$(ls -1 "$AXIOM_PATH/accounts/" | grep "huaweicloud.*\.json" | grep -v "\.example" | sed 's/\.json//')
         if [ ! -z "$existing_configs" ]; then
             echo -e "${BGreen}当前已配置的华为云账号:${Color_Off}"
             echo "$existing_configs"
@@ -108,6 +128,13 @@ function huaweicloudsetup() {
         echo -e -n "${Green}请输入访问密钥密码 (SK): \n>> ${Color_Off}"
         read -s SECRET_KEY
         echo
+        
+        while [[ "$SECRET_KEY" == "" ]]; do
+            echo -e "${BRed}请提供华为云访问密钥密码，您的输入为空。${Color_Off}"
+            echo -e -n "${Green}请输入访问密钥密码 (SK): \n>> ${Color_Off}"
+            read -s SECRET_KEY
+            echo
+        done
         
         echo -e -n "${Green}请输入项目 ID: \n>> ${Color_Off}"
         read PROJECT_ID
