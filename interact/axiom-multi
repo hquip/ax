@@ -1,0 +1,32 @@
+#!/bin/bash
+
+AXIOM_PATH="$HOME/.axiom"
+source "$AXIOM_PATH/interact/includes/vars.sh"
+source "$AXIOM_PATH/providers/huaweicloud-functions.sh"
+
+usage() {
+    echo -e "${BWhite}使用方法:${Color_Off}"
+    echo -e "  axiom-multi [命令] [账号列表]"
+    echo -e "  账号列表格式: account1,account2,account3"
+    echo -e "  不指定账号列表则在所有华为云账号上执行"
+    echo
+    echo -e "${BWhite}示例:${Color_Off}"
+    echo -e "  axiom-multi 'axiom-fleet -i 5' huaweicloud1,huaweicloud2"
+    echo -e "  axiom-multi 'axiom-scan targets.txt -m nuclei'"
+    exit 1
+}
+
+if [ $# -lt 1 ]; then
+    usage
+fi
+
+command="$1"
+accounts="$2"
+
+if [ -z "$accounts" ]; then
+    echo -e "${BGreen}在所有华为云账号上执行命令: $command${Color_Off}"
+    run_on_all_huaweicloud "$command"
+else
+    echo -e "${BGreen}在指定账号上执行命令: $command${Color_Off}"
+    run_on_multiple_accounts "$command" "$accounts"
+fi 
