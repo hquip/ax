@@ -77,12 +77,7 @@ get_default_size() {
     default_size="DEV1-S"
 
   elif [[ "$provider" == "huaweicloud" ]]; then
-    echo -e "${Green}Available sizes for huaweicloud:${Color_Off}"
-    echo -e "${Blue}s6.small.1  - 1 vCPU, 1GB RAM${Color_Off}"
-    echo -e "${Blue}s6.medium.2 - 2 vCPU, 2GB RAM${Color_Off}"
-    echo -e "${Blue}s6.medium.4 - 2 vCPU, 4GB RAM${Color_Off}"
-    echo -e "${Blue}s6.large.4  - 4 vCPU, 4GB RAM${Color_Off}"
-    echo -e "${Blue}s6.large.8  - 4 vCPU, 8GB RAM${Color_Off}"
+    default_size="s6.small.1"
 
   else
     echo "Error: Unknown provider '$provider'"
