@@ -1,0 +1,6 @@
+[
+  {
+    "command": "[ ! -s input ] && exit 1; mkdir output ;cat input | sudo /home/op/go/bin/naabu -o output/naabu.txt",
+    "ext": ""
+  }
+]

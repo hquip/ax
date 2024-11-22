@@ -1,0 +1,39 @@
+#!/bin/bash
+
+AXIOM_PATH="$HOME/.axiom"
+provider="$(jq -r '.provider' "$AXIOM_PATH"/axiom.json)"
+source "$AXIOM_PATH/interact/includes/vars.sh"
+source "$AXIOM_PATH/interact/includes/functions.sh"
+account_path=$(ls -la $AXIOM_PATH/axiom.json | rev | cut -d " " -f 1 | rev)
+
+if [ "$1" == "ls" ]
+then
+	list_regions
+elif [ "$1" == "select" ]
+then
+	region_json=$(regions)
+	lines=$(echo $region_json | grep "$2" | wc -l | awk '{ print $1 }')
+
+	if [ "$lines" -gt 0 ]
+	then
+		cat $AXIOM_PATH/axiom.json | jq -r ".region=\"$2\"" | jq -r > $AXIOM_PATH/axiom.json.new
+		if [ "$provider" = "gcp" ]; then
+			physical_region=$(echo $2| rev | cut -d '-' -f2- | rev)
+			availability_zones=$(echo "$region_json" | jq -r '.[].name')
+			# Check if selected availability zone is in the list of valid availability zones
+			if ! echo "$2" | grep -qw "$availability_zones"; then
+				echo -e "${BRed}Error: for GCP you must select an availability zone as a region${Color_Off}"
+				echo -e "${BRed}List all availability zones with ax region ls.. exiting${Color_Off}"
+				exit
+			fi
+			cat $AXIOM_PATH/axiom.json | jq -r ".physical_region=\"$physical_region\"" | jq -r ".region=\"$2\"" |jq -r > $AXIOM_PATH/axiom.json.new
+		fi
+
+	mv $AXIOM_PATH/axiom.json.new $account_path
+	echo -e "${BWhite}Selected region $2${Color_Off}"
+	fi
+else
+	echo "Usage:"
+	echo -e "\taxiom-region ls - List available regions"
+	echo -e "\taxiom-region select <nyc3> - Select region"
+fi

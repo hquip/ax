@@ -1,0 +1,6 @@
+[
+  {
+    "command": "cat input | assetfinder --subs-only | tee output",
+    "ext": "txt"
+  }
+]

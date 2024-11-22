@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# Set the AXIOM_PATH
+AXIOM_PATH="$HOME/.axiom"
+AXIOM_JSON="$AXIOM_PATH/axiom.json"
+source "$AXIOM_PATH/interact/includes/vars.sh"
+
+# Get builder and provisioner from arguments
+builder=$1
+provisioner=$2
+extension=$3
+
+# Set the paths to builder and provisioner files
+packer_builder_path="$AXIOM_PATH/images/$extension/builders/$builder.$extension"
+packer_provisioner_path="$AXIOM_PATH/images/$extension/provisioners/$provisioner.$extension"
+packer_output_path="$AXIOM_PATH/images/$extension/axiom.$extension"
+
+# Check if the builder file exists
+if [ -f "$packer_builder_path" ]; then
+
+ if [[ "$extension" == "json" ]]; then
+
+   # Read the provisioner and builder JSON files and merge them
+   builder_data=$(jq '.builders' "$packer_builder_path")
+   provisioner_data=$(jq '.' "$packer_provisioner_path")
+
+   # Merge the builder data into the provisioner data
+   merged_data=$(echo "$provisioner_data" | jq --argjson builders "$builder_data" '.builders = $builders')
+
+   # Write the merged data to axiom.json
+   echo "$merged_data" | jq '.' > "$packer_output_path"
+   echo "Merged Packer JSON data written to $packer_output_path"
+
+ elif [[ "$extension" == "pkr.hcl" ]]; then
+
+  # Create beginning of Packer pkr.hcl file
+  jq -r 'keys[]' "$AXIOM_JSON" | while read -r key; do
+  cat <<EOF >> "$packer_output_path"
+variable "$key" {
+  type = string
+
+}
+
+EOF
+  done
+
+  # cat the builder and provisioner fata into final packer pkr.hcl
+  cat "$packer_builder_path" "$packer_provisioner_path" >> "$packer_output_path"
+  echo "Merged Packer pkr.hcl data written to $packer_output_path"
+
+ fi
+else
+  echo -e "${Red}Builder does not exist at $packer_builder_path${Color_Off}"
+fi

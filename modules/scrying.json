@@ -1,0 +1,6 @@
+[
+  {
+    "command": "sudo xvfb-run scrying -f input --output output",
+    "ext": ""
+  }
+]

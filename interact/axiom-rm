@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+AXIOM_PATH="$HOME/.axiom"
+source "$AXIOM_PATH/interact/includes/vars.sh"
+source "$AXIOM_PATH/interact/includes/functions.sh"
+output="${Red}No instance supplied, use '\*' to delete all instances on the account, use -f to force delete and avoid confirmation prompts${Color_Off}"
+
+if [ -z "$1" ]; then
+    echo -e "$output"
+    exit
+fi
+
+force="false"
+query=""
+instance_names=""
+multi=false
+
+for var in "$@"; do
+    case "$var" in
+        -f|--force)
+            force=true
+            ;;
+        --multi)
+            multi=true
+            ;;
+        *)
+            query="$query '$var'"
+            ;;
+    esac
+done
+
+instance_names=$(eval query_instances "$query")
+
+if [[ "$instance_names" ]]; then
+    if [ "$multi" == "true" ]; then
+        delete_instances "$instance_names" "$force"
+    else
+        for instance in $instance_names; do
+            echo -e "${Red}Deleting '$instance'...${Color_Off}"
+            delete_instance "$instance" "$force"
+        done
+    fi
+else
+    >&2 echo -e "$output ${Color_Off}"
+    exit
+fi

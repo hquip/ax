@@ -1,0 +1,7 @@
+[
+  {
+    "command": "sudo trufflehog github --org=_target_ | tee output/_cleantarget_",
+    "ext": "dir",
+    "threads": "1"
+  }
+]

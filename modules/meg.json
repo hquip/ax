@@ -1,0 +1,7 @@
+[
+  {
+    "command": "/home/op/go/bin/meg -v _wordlist_ input output",
+    "wordlist": "/",
+    "ext": ""
+  }
+]

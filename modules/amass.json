@@ -1,0 +1,6 @@
+[
+  {
+    "command": "/usr/bin/amass enum -df input -o output",
+    "ext": "txt"
+  }
+]

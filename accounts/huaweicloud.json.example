@@ -1,0 +1,10 @@
+{
+    "access_key": "",
+    "secret_key": "",
+    "project_id": "",
+    "region": "cn-north-4",
+    "vpc_id": "",
+    "subnet_id": "",
+    "security_group_id": "",
+    "availability_zone": "cn-north-4a"
+} 

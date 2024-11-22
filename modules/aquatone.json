@@ -1,0 +1,6 @@
+[
+  {
+    "command": "cat input | /usr/bin/aquatone -out output",
+    "ext": ""
+  }
+]

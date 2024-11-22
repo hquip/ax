@@ -1,0 +1,22 @@
+{
+    "builders": [
+        {
+            "type": "huaweicloud-ecs",
+            "access_key": "{{ user `access_key` }}",
+            "secret_key": "{{ user `secret_key` }}",
+            "region": "{{ user `region` }}",
+            "project_id": "{{ user `project_id` }}",
+            "image_name": "{{ user `snapshot_name` }}",
+            "source_image": "3a28f934-9077-4c6f-9bf3-4962d22c4971", 
+            "instance_type": "{{ user `default_size` }}",
+            "ssh_username": "root",
+            "ssh_port": 2266,
+            "vpc_id": "{{ user `vpc_id` }}",
+            "subnet_id": "{{ user `subnet_id` }}",
+            "security_group_id": "{{ user `security_group_id` }}",
+            "system_disk_type": "SAS",
+            "system_disk_size": 40,
+            "user_data_file": "{{ template_dir }}/../../provisioners/{{ user `variant` }}.sh"
+        }
+    ]
+} 
