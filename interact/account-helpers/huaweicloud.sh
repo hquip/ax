@@ -71,114 +71,93 @@ else
 fi
 
 function huaweicloudsetup() {
-    echo -e "${BGreen}请访问华为云控制台获取访问密钥: https://console.huaweicloud.com/iam/?locale=zh-cn#/mine/accessKey${Color_Off}"
-    
-    echo -e -n "${Green}请输入您的华为云访问密钥 ID (必填): \n>> ${Color_Off}"
-    read ACCESS_KEY
-    while [[ "$ACCESS_KEY" == "" ]]; do
-        echo -e "${BRed}请提供华为云访问密钥 ID，您的输入为空。${Color_Off}"
-        echo -e -n "${Green}请输入您的访问密钥 ID (必填): \n>> ${Color_Off}"
+    while true; do
+        echo -e "${BGreen}请访问华为云控制台获取访问密钥: https://console.huaweicloud.com/iam/?locale=zh-cn#/mine/accessKey${Color_Off}"
+        echo -e "${Yellow}注意: 每个IAM用户最多可以创建2个有效的访问密钥(AK/SK)${Color_Off}"
+        
+        # 列出现有的华为云配置
+        existing_configs=$(ls -1 "$AXIOM_PATH/accounts/" | grep "huaweicloud.*\.json" | sed 's/\.json//')
+        if [ ! -z "$existing_configs" ]; then
+            echo -e "${BGreen}当前已配置的华为云账号:${Color_Off}"
+            echo "$existing_configs"
+        fi
+
+        # 获取配置文件名称
+        echo -e -n "${BWhite}请输入配置文件名称（例如: huaweicloud1, huaweicloud-prod 等，必须全小写且不含特殊字符）\n>> ${Color_Off}"
+        read title
+        while [[ "$title" == "" ]]; do
+            echo -e "${BRed}配置文件名称不能为空${Color_Off}"
+            echo -e -n "${BWhite}请输入配置文件名称: \n>> ${Color_Off}"
+            read title
+        done
+
+        # 检查文件是否已存在
+        if [[ -f "$AXIOM_PATH/accounts/$title.json" ]]; then
+            echo -e -n "${Yellow}配置文件 '$title' 已存在，是否覆盖？(y/N) ${Color_Off}"
+            read ans
+            if [[ "$ans" != "y" && "$ans" != "Y" ]]; then
+                echo -e "${BRed}操作已取消${Color_Off}"
+                continue
+            fi
+        fi
+
+        # 获取账号配置信息
+        echo -e -n "${Green}请输入访问密钥 ID (AK): \n>> ${Color_Off}"
         read ACCESS_KEY
-    done
-
-    echo -e -n "${Green}请输入您的华为云访问密钥密码 (必填): \n>> ${Color_Off}"
-    read SECRET_KEY
-    while [[ "$SECRET_KEY" == "" ]]; do
-        echo -e "${BRed}请提供华为云访问密钥密码，您的输入为空。${Color_Off}"
-        echo -e -n "${Green}请输入您的访问密钥密码 (必填): \n>> ${Color_Off}"
-        read SECRET_KEY
-    done
-
-    echo -e -n "${Green}请输入您的华为云项目 ID (必填): \n>> ${Color_Off}"
-    read PROJECT_ID
-    while [[ "$PROJECT_ID" == "" ]]; do
-        echo -e "${BRed}请提供华为云项目 ID，您的输入为空。${Color_Off}"
-        echo -e -n "${Green}请输入您的项目 ID (必填): \n>> ${Color_Off}"
+        
+        echo -e -n "${Green}请输入访问密钥密码 (SK): \n>> ${Color_Off}"
+        read -s SECRET_KEY
+        echo
+        
+        echo -e -n "${Green}请输入项目 ID: \n>> ${Color_Off}"
         read PROJECT_ID
+        
+        echo -e -n "${Green}请输入区域 (默认: cn-north-4): \n>> ${Color_Off}"
+        read REGION
+        REGION=${REGION:-cn-north-4}
+
+        # 验证凭证
+        echo -e "${BGreen}正在验证凭证...${Color_Off}"
+        export HUAWEICLOUD_ACCESS_KEY="$ACCESS_KEY"
+        export HUAWEICLOUD_SECRET_KEY="$SECRET_KEY"
+        export HUAWEICLOUD_REGION="$REGION"
+        export HUAWEICLOUD_PROJECT_ID="$PROJECT_ID"
+
+        if ! hcloud ecs list-flavors &>/dev/null; then
+            echo -e "${BRed}凭证验证失败，请检查输入的信息${Color_Off}"
+            continue
+        fi
+
+        # 创建配置文件
+        data="{
+            \"provider\": \"huaweicloud\",
+            \"access_key\": \"$ACCESS_KEY\",
+            \"secret_key\": \"$SECRET_KEY\",
+            \"project_id\": \"$PROJECT_ID\",
+            \"region\": \"$REGION\",
+            \"default_size\": \"s6.small.1\"
+        }"
+
+        echo -e "${BGreen}配置信息如下: ${Color_Off}"
+        echo "$data" | jq '.secret_key = "*****"'
+        
+        echo -e -n "${BWhite}是否保存此配置？(Y/n) ${Color_Off}"
+        read ans
+        if [[ "$ans" == "n" || "$ans" == "N" ]]; then
+            echo -e "${BRed}配置未保存${Color_Off}"
+            continue
+        fi
+
+        echo "$data" | jq '.' > "$AXIOM_PATH/accounts/$title.json"
+        echo -e "${BGreen}配置已保存到 $title.json${Color_Off}"
+        
+        # 询问是否继续添加新账号
+        echo -e -n "${BWhite}是否继续添加新的华为云账号？(y/N) ${Color_Off}"
+        read continue_add
+        if [[ "$continue_add" != "y" && "$continue_add" != "Y" ]]; then
+            break
+        fi
     done
-
-    # 配置华为云 CLI
-    hcloud configure set ak "$ACCESS_KEY"
-    hcloud configure set sk "$SECRET_KEY"
-    hcloud configure set project "$PROJECT_ID"
-    hcloud configure set output json
-
-    # 列出可用区域
-    echo -e "${BGreen}正在列出可用区域...${Color_Off}"
-    hcloud ecs list-availability-zones
-
-    default_region="cn-north-4"
-    echo -e -n "${Green}请输入您的默认区域（您可以稍后使用 axiom-region select \$region 更改）：默认为 '$default_region'，按回车确认 \n>> ${Color_Off}"
-    read region
-    if [[ "$region" == "" ]]; then
-        echo -e "${Blue}已选择默认选项 '$default_region'${Color_Off}"
-        region="$default_region"
-    fi
-
-    echo -e -n "${Green}请输入您的默认实例规格（您可以稍后使用 axiom-sizes select \$size 更改）：默认为 's6.small.1'，按回车确认 \n>> ${Color_Off}"
-    read size
-    if [[ "$size" == "" ]]; then
-        echo -e "${Blue}已选择默认选项 's6.small.1'${Color_Off}"
-        size="s6.small.1"
-    fi
-
-    hcloud configure set region "$region"
-
-    # 打印可用的安全组
-    echo -e "${BGreen}正在打印可用的安全组:${Color_Off}"
-    hcloud vpc list-security-groups
-
-    # 提示用户输入安全组名称
-    echo -e -n "${Green}请输入上面列出的安全组 ID，或按回车创建一个随机名称的新安全组 \n>> ${Color_Off}"
-    read SECURITY_GROUP
-
-    # 如果未提供安全组名称，则创建一个新的
-    if [[ "$SECURITY_GROUP" == "" ]]; then
-        axiom_sg_random="axiom-$(date +%m-%d_%H-%M-%S-%1N)"
-        SECURITY_GROUP=$axiom_sg_random
-        echo -e "${BGreen}正在创建 Axiom 安全组: ${Color_Off}"
-        sg=$(hcloud vpc create-security-group --name "$SECURITY_GROUP" --description "Axiom SG")
-        group_id=$(echo "$sg" | jq -r '.security_group.id')
-        echo -e "${BGreen}已创建安全组: $group_id ${Color_Off}"
-    else
-        # 使用现有的安全组
-        echo -e "${BGreen}使用安全组: $SECURITY_GROUP ${Color_Off}"
-        group_id="$SECURITY_GROUP"
-    fi
-
-    # 添加安全组规则
-    echo -e "${BGreen}正在添加安全组规则...${Color_Off}"
-    hcloud vpc create-security-group-rule \
-        --security-group-id "$group_id" \
-        --direction ingress \
-        --protocol tcp \
-        --port-range-min 2266 \
-        --port-range-max 2266 \
-        --remote-ip-prefix "0.0.0.0/0"
-
-    data="$(echo "{\"access_key\":\"$ACCESS_KEY\",\"secret_key\":\"$SECRET_KEY\",\"project_id\":\"$PROJECT_ID\",\"security_group_id\":\"$group_id\",\"region\":\"$region\",\"provider\":\"huaweicloud\",\"default_size\":\"$size\"}")"
-
-    echo -e "${BGreen}配置文件设置如下: ${Color_Off}"
-    echo $data | jq '.secret_key = "*************************************"'
-    echo -e "${BWhite}按回车保存到新配置文件，输入 'r' 重新开始。${Color_Off}"
-    read ans
-
-    if [[ "$ans" == "r" ]]; then
-        $0
-        exit
-    fi
-
-    echo -e -n "${BWhite}请输入您的配置文件名称（例如 'huaweicloud'，必须全小写且不含特殊字符）\n>> ${Color_Off}"
-    read title
-
-    if [[ "$title" == "" ]]; then
-        title="huaweicloud"
-        echo -e "${BGreen}已命名配置文件为 'huaweicloud'${Color_Off}"
-    fi
-
-    echo $data | jq > "$AXIOM_PATH/accounts/$title.json"
-    echo -e "${BGreen}已成功保存配置文件 '$title'！${Color_Off}"
-    $AXIOM_PATH/interact/axiom-account $title
 }
 
 huaweicloudsetup 
