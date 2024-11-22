@@ -5,17 +5,19 @@ source "$AXIOM_PATH/interact/includes/vars.sh"
 
 echo -e "${BWhite}Axiom Account Setup${Color_Off}"
 echo -e "${BGreen}You can use this wizard to add new accounts, once made, use axiom-account to switch between profiles${Color_Off}"
-account_helpers=$(find "$AXIOM_PATH/interact/account-helpers" -name "*.sh"  -execdir basename -s '.sh' {} + | sort)
-account_str=$(echo $account_helpers | sed 's/ /, /g')
+
+# 修改这里：使用预定义的 providers 列表，包含华为云
+providers="aws azure do gcp hetzner huaweicloud ibm linode scaleway"
+account_str=$(echo $providers | sed 's/ /, /g')
+
 echo -e -n "${Green}Please enter your provider ($account_str): \n>> ${Color_Off}"
 read provider
-provider_path="$AXIOM_PATH/interact/account-helpers/$provider.sh"
 
-while [[ ! -f "$provider_path" ]]; 
-do
-	echo -e -n "${Green}This is not a valid provider, please enter your a valid provider ($account_str): \n>> ${Color_Off}"
-	read provider
-	provider_path="$AXIOM_PATH/interact/account-helpers/$provider.sh"
+# 验证输入的 provider
+while [[ ! " $providers " =~ " $provider " ]]; do
+    echo -e -n "${Green}This is not a valid provider, please enter your a valid provider ($account_str): \n>> ${Color_Off}"
+    read provider
 done
 
+provider_path="$AXIOM_PATH/interact/account-helpers/$provider.sh"
 bash "$provider_path"
