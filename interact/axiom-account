@@ -598,17 +598,11 @@ fi # end of scaleway
 if [[ "$provider" == "huaweicloud" ]]; then
    installed_version=$(hcloud --version 2>/dev/null | cut -d ' ' -f 3)
    if [[ "$(printf '%s\n' "$installed_version" "$HcloudCliVersion" | sort -V | head -n 1)" != "$HcloudCliVersion" ]]; then
+        echo -e "${Yellow}华为云 CLI 未安装或版本低于 ~/.axiom/interact/includes/vars.sh 中推荐的版本${Color_Off}"
 
         # Handle macOS installation/update
         if [[ $BASEOS == "Mac" ]]; then
-            whereis brew
-            if [ ! $? -eq 0 ] || [[ ! -z ${AXIOM_FORCEBREW+x} ]]; then
-                echo -e "${BGreen}Installing Homebrew...${Color_Off}"
-                /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-            else
-                echo -e "${BGreen}Checking for Homebrew... already installed.${Color_Off}"
-            fi
-            echo -e "${BGreen}Installing Huawei Cloud CLI (hcloud)...${Color_Off}"
+            echo -e "${BGreen}在 macOS 上安装/更新华为云 CLI...${Color_Off}"
             brew install huaweicloud-cli
 
         # Handle Linux installation/update
@@ -624,15 +618,22 @@ if [[ "$provider" == "huaweicloud" ]]; then
             fi
 
             # Install or update huaweicloud-cli on different Linux distributions
-            if [[ $OS == "Arch" ]] || [[ $OS == "ManjaroLinux" ]]; then
-                sudo pacman -Syu huaweicloud-cli --noconfirm
-            elif [[ $OS == "Ubuntu" ]] || [[ $OS == "Debian" ]] || [[ $OS == "Linuxmint" ]] || [[ $OS == "Parrot" ]] || [[ $OS == "Kali" ]] || [[ $OS == "unknown-Linux" ]] || [[ $OS == "UbuntuWSL" ]]; then
-                echo -e "${BGreen}Installing Huawei Cloud CLI (hcloud)...${Color_Off}"
-                curl -fsSL https://cli-repo.huaweicloud.com/cli/install.sh | bash
+            if [[ $OS == "Ubuntu" ]] || [[ $OS == "Debian" ]] || [[ $OS == "Linuxmint" ]] || [[ $OS == "Parrot" ]] || [[ $OS == "Kali" ]] || [[ $OS == "unknown-Linux" ]] || [[ $OS == "UbuntuWSL" ]]; then
+                echo -e "${BGreen}在 $OS 上安装/更新华为云 CLI...${Color_Off}"
+                # 使用官方安装脚本
+                curl -fsSL https://obs.cn-north-4.myhuaweicloud.com/hcloud/cli/latest/hcloud.sh | bash
             elif [[ $OS == "Fedora" ]]; then
-                echo "Needs Conversation for Fedora"
+                echo -e "${BGreen}在 Fedora 上安装/更新华为云 CLI...${Color_Off}"
+                # 使用官方安装脚本
+                curl -fsSL https://obs.cn-north-4.myhuaweicloud.com/hcloud/cli/latest/hcloud.sh | bash
+            elif [[ $OS == "Arch" ]] || [[ $OS == "ManjaroLinux" ]]; then
+                echo -e "${BGreen}在 $OS 上安装/更新华为云 CLI...${Color_Off}"
+                # 使用官方安装脚本
+                curl -fsSL https://obs.cn-north-4.myhuaweicloud.com/hcloud/cli/latest/hcloud.sh | bash
             fi
         fi
+
+        echo "华为云 CLI 已更新到版本 $HcloudCliVersion。"
    fi
 
     echo -e "${BGreen}Installing Huawei Cloud packer plugin...${Color_Off}"
