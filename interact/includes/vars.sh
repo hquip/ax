@@ -40,6 +40,7 @@ export AWSCliVersion="2.17.45"
 export GCloudCliVersion="493.0.0"
 export PackerVersion="1.11.2"
 export ScalewayCliVersion="2.34.0"
+export HcloudCliVersion="1.0.0"
 
 # Auto Update Option
 [ -f $AXIOM_PATH/interact/includes/.auto_update ] && source $AXIOM_PATH/interact/includes/.auto_update
