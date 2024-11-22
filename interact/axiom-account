@@ -588,6 +588,38 @@ if [[ "$provider" == "scaleway" ]]; then
     fi
 fi # end of scaleway
 
+# 在 provider 判断部分添加华为云的处理逻辑
+elif [[ "$provider" == "huaweicloud" ]]; then
+    echo -e "${BGreen}Installing Huawei Cloud packer plugin...${Color_Off}"
+    packer plugins install github.com/huaweicloud/huaweicloud
+
+    # 从配置文件获取认证信息
+    access_key="$(jq -r '.access_key' "$AXIOM_PATH/accounts/$1.json")"
+    secret_key="$(jq -r '.secret_key' "$AXIOM_PATH/accounts/$1.json")"
+    project_id="$(jq -r '.project_id' "$AXIOM_PATH/accounts/$1.json")"
+    region="$(jq -r '.region' "$AXIOM_PATH/accounts/$1.json")"
+
+    # 配置华为云 CLI
+    if ! command -v hcloud &> /dev/null; then
+        echo -e "${Yellow}Huawei Cloud CLI (hcloud) not found. Installing...${Color_Off}"
+        curl -fsSL https://cli-repo.huaweicloud.com/cli/install.sh | bash
+    fi
+
+    # 配置华为云凭证
+    hcloud configure set ak "$access_key"
+    hcloud configure set sk "$secret_key"
+    hcloud configure set project "$project_id"
+    hcloud configure set region "$region"
+
+    # 验证凭证
+    if ! hcloud ecs list-flavors &>/dev/null; then
+        echo -e "${BRed}Huawei Cloud authentication failed. Running bootstrap...${Color_Off}"
+        bootstrap
+    else
+        echo -e "${BGreen}Huawei Cloud credentials authenticated successfully.${Color_Off}"
+    fi
+fi
+
 echo -e "${Green}Selected $1 successfully${Color_Off}"
 else
         echo -e "${Red}Account name not present${Color_Off}"
