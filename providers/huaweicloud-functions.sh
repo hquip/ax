@@ -1,7 +1,43 @@
 #!/bin/bash
 
-# 定义 AXIOM 路径
+# 定义 AXIOM_PATH
 AXIOM_PATH="$HOME/.axiom"
+
+# 获取所有华为云账号配置
+get_huaweicloud_accounts() {
+    ls -1 "$AXIOM_PATH/accounts/" | grep "huaweicloud.*\.json" | sed 's/\.json//'
+}
+
+# 在多个账号上执行命令
+run_on_multiple_accounts() {
+    command="$1"
+    accounts="$2"  # 账号列表，用逗号分隔
+    
+    IFS=',' read -ra ADDR <<< "$accounts"
+    for account in "${ADDR[@]}"; do
+        echo -e "${BGreen}在账号 $account 上执行命令...${Color_Off}"
+        # 临时切换到指定账号
+        current_config=$(readlink -f "$AXIOM_PATH/axiom.json")
+        ln -sf "$AXIOM_PATH/accounts/$account.json" "$AXIOM_PATH/axiom.json"
+        
+        # 执行命令
+        eval "$command"
+        
+        # 恢复原配置
+        ln -sf "$current_config" "$AXIOM_PATH/axiom.json"
+    done
+}
+
+# 在所有华为云账号上执行命令
+run_on_all_huaweicloud() {
+    command="$1"
+    accounts=$(get_huaweicloud_accounts | tr '\n' ',' | sed 's/,$//')
+    run_on_multiple_accounts "$command" "$accounts"
+}
+
+# 示例使用：
+# run_on_multiple_accounts "axiom-fleet -i 5" "huaweicloud1,huaweicloud2"
+# run_on_all_huaweicloud "axiom-scan"
 
 ###################################################################
 # 创建实例
@@ -227,7 +263,7 @@ delete_snapshot() {
 # 创建快照
 # 用于: axiom-images
 # 参数:
-#   $1 - instance: 实例��称
+#   $1 - instance: 实例称
 #   $2 - snapshot_name: 快照名称
 create_snapshot() {
     instance="$1"
